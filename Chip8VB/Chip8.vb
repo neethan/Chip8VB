@@ -267,11 +267,22 @@ Public Class Chip8
                     Case &HF
                         I = 75
                 End Select
+                PC += 2
             ElseIf Opcode.EndsWith("33") Then
-                ' how do i do this again
+                RAM(I) = V(X) / 100
+                RAM(I + 1) = (V(X) / 10) Mod 10
+                RAM(I + 2) = (V(X) Mod 100) Mod 10
+                PC += 2
             ElseIf Opcode.EndsWith("55") Then
+                For a = 0 To X
+                    RAM(I + a) = V(X)
+                Next
+                PC += 2
             ElseIf Opcode.EndsWith("65") Then
-
+                For a = 0 To X
+                    V(X) = RAM(I + a)
+                Next
+                PC += 2
             Else
                 Emulating = False
                 Throw New Exception(OpcodeError(Opcode))
