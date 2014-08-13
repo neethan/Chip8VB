@@ -9,11 +9,15 @@ Imports OpenTK.Input
 Imports Chip8VB.Chip8
 
 Module Module1
-    Dim WithEvents Window As New GameWindow(128, 64)
+    Dim WithEvents Window As GameWindow
+    Dim Chip8vb As Chip8
+    Dim WindowMultiplier As Integer = 2
 
-    Sub Main()
+    Sub Main(args() As String)
+        Chip8vb = New Chip8(args(0).ToString)
+        Window = New GameWindow(128 * WindowMultiplier, 64 * WindowMultiplier)
         Window.WindowBorder = WindowBorder.Fixed
-        Window.Run(120, 60)     ' We'll make the Chip-8 do 120 cycles per second on average
+        Window.Run(180, 60)     ' We'll make the Chip-8 do 120 cycles per second on average
         Console.WriteLine("Emulation halted! Choose a new game? (Y/N)")
         Dim key As ConsoleKeyInfo = Console.ReadKey
         If key.Key = ConsoleKey.N Then
@@ -28,25 +32,40 @@ Module Module1
 
     Private Sub Window_Load(sender As Object, e As System.EventArgs) Handles Window.Load
         Window.VSync = VSyncMode.On
+        Dim w = Window.Width                ' Width and height of the gamewindow
+        Dim h = Window.Height
+        GL.MatrixMode(MatrixMode.Projection)
+        GL.LoadIdentity()
+        GL.Ortho(0, w, h, 0, 0, 1)
+        GL.MatrixMode(MatrixMode.Modelview)
+        GL.Translate(0.375, 0.375, 0)
+        GL.Disable(EnableCap.DepthTest)     ' Drawing in 2D
     End Sub
 
     Private Sub Window_RenderFrame(sender As Object, e As OpenTK.FrameEventArgs) Handles Window.RenderFrame
-        GL.Clear(ClearBufferMask.ColorBufferBit Or ClearBufferMask.DepthBufferBit)
-
-        GL.MatrixMode(MatrixMode.Projection)
+        Dim w = Window.Width
+        Dim h = Window.Height
+        GL.MatrixMode(MatrixMode.Modelview)
         GL.LoadIdentity()
-        GL.Ortho(-1.0, 1.0, -1.0, 1.0, 0.0, 4.0)
 
-        GL.Begin(BeginMode.Triangles)
-
-        GL.Color3(Color.MidnightBlue)   ' Why not draw a triangle while waiting for me to finish the drawing code?
-        GL.Vertex2(-1.0F, 1.0F)
-        GL.Color3(Color.SpringGreen)
-        GL.Vertex2(0.0F, -1.0F)
-        GL.Color3(Color.Ivory)
-        GL.Vertex2(1.0F, 1.0F)          ' I like triangles.
-
-        GL.End()
+        If Chip8vb.Repaint Then
+            For y = 0 To 31
+                For x = 0 To 63
+                    If Chip8vb.Display(x, y) = 1 Then
+                        GL.Color3(Color.White)
+                        GL.Begin(BeginMode.Points)
+                        GL.Vertex2(x, y)
+                        GL.End()
+                    ElseIf Chip8vb.Display(x, y) = 0 Then
+                        GL.Color3(Color.Black)
+                        GL.Begin(BeginMode.Points)
+                        GL.Vertex2(x, y)
+                        GL.End()
+                    End If
+                Next
+            Next
+            Chip8vb.Repaint = False
+        End If
 
         Window.SwapBuffers()
     End Sub
@@ -54,6 +73,13 @@ Module Module1
     Private Sub Window_UpdateFrame(sender As Object, e As OpenTK.FrameEventArgs) Handles Window.UpdateFrame
         If Window.Keyboard(Key.Escape) Then
             Window.Close()
+        End If
+        Chip8vb.EmulateCycle()
+        If Chip8vb.DT > 0 Then
+            Chip8vb.DT -= 1
+        End If
+        If Chip8vb.ST > 0 Then
+            Chip8vb.ST -= 1
         End If
     End Sub
 End Module

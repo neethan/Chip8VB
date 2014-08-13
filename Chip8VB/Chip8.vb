@@ -1,4 +1,6 @@
-﻿' Chip8VB - Another Chip-8 Emulator; this time, it actually works!
+﻿Imports System.IO
+
+' Chip8VB - Another Chip-8 Emulator; this time, it actually works!
 ' Copyright © Neethan Puvanendran 2014. All rights reserved.
 ' 
 '
@@ -10,6 +12,7 @@
 ' 7 8 9 E
 ' A 0 B F
 Public Class Chip8
+    Private ROM As String
     Private RAM(&HFFF) As Byte
     Private V(&HF) As Byte
     Private I As New UInt16
@@ -17,23 +20,18 @@ Public Class Chip8
     Private SP As New Byte
     Private Stack(&HF) As UInt16
     Public Display(63, 31) As Integer
-    Private ST As Byte
-    Private DT As Byte
+    Public ST As Byte
+    Public DT As Byte
     Public Keys(&HF) As Boolean
     Public Repaint As Boolean = False
     Public Emulating As Boolean = False
 
-    Public Sub New()
-
-    End Sub
-
     Public Sub EmulateCycle()
         Dim Opcode As String = RAM(PC).ToString("X").PadLeft(2, "0"c) & RAM(PC + 1).ToString("X").PadLeft(2, "0"c)
         Dim X As Integer = Val("&H" & Opcode.Substring(1, 1))
-        Dim Y As Integer = Val("&H" & Opcode.Substring(1, 1))
+        Dim Y As Integer = Val("&H" & Opcode.Substring(2, 1))
         Dim NN As Byte = Val("&H" & Opcode.Substring(2, 2))
         Dim ADDR As Integer = Val("&H" & Opcode.Substring(1, 3))
-
 
         If Opcode = "00E0" Then
             For a = 0 To 63
@@ -157,22 +155,24 @@ Public Class Chip8
             ' i hate this opcode with a burning passion
             Dim nibble As Integer = Val("&H" & Opcode.Substring(3, 1))
             V(15) = 0
-            Dim line As Byte
-            For ypos = 0 To nibble
-                Dim MemoryY = (V(Y) + ypos)
+            Dim line As Integer
+            For ypos = 0 To nibble - 1
+                Dim MemoryY = (V(Y) + ypos) Mod 64
                 line = RAM(I + ypos)
                 For xpos = 0 To 7
-                    Dim MemoryX = (V(X) + xpos)
+                    Dim MemoryX = (V(X) + xpos) Mod 64
                     Dim b As String = Convert.ToString(line, 2).PadLeft(8, "0"c).Substring(xpos, 1)
                     If b = "1" Then
-                        If (Display(MemoryX, MemoryY) Xor 1) = 0 Then
-                            V(15) = 1
+                        Display(MemoryX, MemoryY) = Display(MemoryX, MemoryY) Xor 1
+                        If Display(MemoryX, MemoryY) = 0 Then
+                            V(&HF) = 1
                         End If
                     End If
                 Next
             Next
             Repaint = True
             PC += 2
+            Console.WriteLine("Draw event: X:" & V(X) & " Y:" & V(Y) & " H:" & nibble)
         ElseIf Opcode.StartsWith("E") Then
             If Opcode.EndsWith("9E") Then
                 If Keys(V(X)) Then
@@ -306,6 +306,10 @@ Public Class Chip8
                 Throw New Exception(OpcodeError(Opcode))
             End If
         End If
+        Console.WriteLine(Opcode)
+    End Sub
+
+    Public Sub New()
 
     End Sub
 
@@ -351,6 +355,12 @@ Public Class Chip8
         For a = 0 To 79
             RAM(a) = characters(a)
         Next
+        Me.ROM = Rom
+        Dim FS As New FileStream(Me.ROM, FileMode.Open, FileAccess.Read, FileShare.Read)
+        FS.Seek(0, SeekOrigin.Begin)
+        For a = 0 To FS.Length - 1
+            RAM(&H200 + a) = FS.ReadByte
+        Next
     End Sub
 
     Private Function OpcodeError(ByVal opcode As String)
@@ -375,5 +385,12 @@ Public Class Chip8
                                     & vbNewLine & "V(D): " & V(&HD) _
                                     & vbNewLine & "V(E): " & V(&HE) _
                                     & vbNewLine & "V(F): " & V(&HF))
+    End Function
+
+    Private Function DrawPixel(ByVal x As Integer, ByVal y As Integer)
+        x = x Mod 64    ' If X or Y is greater than 64 or 32 respectively, then the pixels must wrap around the screen
+        y = y Mod 32
+        Display(x, y) = Display(x, y) Xor 1   ' Pixel is XORed to the screen
+        Return Display(x, y)
     End Function
 End Class
