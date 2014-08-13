@@ -154,7 +154,25 @@ Public Class Chip8
             V(X) = NN And Random
             PC += 2
         ElseIf Opcode.StartsWith("D") Then
-            ' i hate this opcode with a burning passion; i'll do it later
+            ' i hate this opcode with a burning passion
+            Dim nibble As Integer = Val("&H" & Opcode.Substring(3, 1))
+            V(15) = 0
+            Dim line As Byte
+            For ypos = 0 To nibble
+                Dim MemoryY = (V(Y) + ypos)
+                line = RAM(I + ypos)
+                For xpos = 0 To 7
+                    Dim MemoryX = (V(X) + xpos)
+                    Dim b As String = Convert.ToString(line, 2).PadLeft(8, "0"c).Substring(xpos, 1)
+                    If b = "1" Then
+                        If (Display(MemoryX, MemoryY) Xor 1) = 0 Then
+                            V(15) = 1
+                        End If
+                    End If
+                Next
+            Next
+            Repaint = True
+            PC += 2
         ElseIf Opcode.StartsWith("E") Then
             If Opcode.EndsWith("9E") Then
                 If Keys(V(X)) Then

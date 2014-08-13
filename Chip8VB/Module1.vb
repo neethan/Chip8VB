@@ -13,7 +13,7 @@ Module Module1
 
     Sub Main()
         Window.WindowBorder = WindowBorder.Fixed
-        Window.Run(120, 60)
+        Window.Run(120, 60)     ' We'll make the Chip-8 do 120 cycles per second on average
         Console.WriteLine("Emulation halted! Choose a new game? (Y/N)")
         Dim key As ConsoleKeyInfo = Console.ReadKey
         If key.Key = ConsoleKey.N Then
@@ -39,12 +39,12 @@ Module Module1
 
         GL.Begin(BeginMode.Triangles)
 
-        GL.Color3(Color.MidnightBlue)
+        GL.Color3(Color.MidnightBlue)   ' Why not draw a triangle while waiting for me to finish the drawing code?
         GL.Vertex2(-1.0F, 1.0F)
         GL.Color3(Color.SpringGreen)
         GL.Vertex2(0.0F, -1.0F)
         GL.Color3(Color.Ivory)
-        GL.Vertex2(1.0F, 1.0F)
+        GL.Vertex2(1.0F, 1.0F)          ' I like triangles.
 
         GL.End()
 
@@ -55,6 +55,5 @@ Module Module1
         If Window.Keyboard(Key.Escape) Then
             Window.Close()
         End If
-
     End Sub
 End Module
